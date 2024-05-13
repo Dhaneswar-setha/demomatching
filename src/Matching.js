@@ -1,7 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./styles.css";
 import { useParams } from "react-router-dom";
-
+import {
+  Avatar,
+  Button,
+  InputLabel,
+  FormControl,
+  Select,
+  Box,
+  Grid,
+  Card,
+  CardHeader,
+  IconButton,
+  Menu,
+  MenuItem,
+  useMediaQuery,
+  useTheme,
+  
+} from "@mui/material";
+// import Modal from "@mui/material/Modal";
 const nodeRadius = 15; // Increased size of the dot
 const columnGap = 10; // Added space between columns
 
@@ -31,11 +48,13 @@ const defaultPairs = [
   },
 ];
 
+let answerArray = [];
+
 const findClosestNode = (nodes, point, threshold = nodeRadius) =>
   nodes.find(
     (node) =>
       Math.abs(point.x - node.x) < threshold &&
-      Math.abs(point.y - node.y) < threshold
+      Math.abs(point.y - node.y) < threshold,
   );
 
 const sameHorizontal = (p1, p2) => p1 && p2 && p1.y === p2.y;
@@ -69,6 +88,7 @@ const renderCanvas = (canvas, leftArr, rightArr) => {
   const ctx = canvas.getContext("2d");
   ctx.canvas.width = 125;
   ctx.canvas.height = 235;
+  console.log(leftArr, rightArr);
 
   const { height, width } = ctx.canvas;
   const rowHeight = height / leftArr.length;
@@ -76,10 +96,12 @@ const renderCanvas = (canvas, leftArr, rightArr) => {
 
   const nodes = [
     ...leftArr.map((_, i) => ({
+      id: _.id,
       x: margin,
       y: i * rowHeight + rowHeight / 2,
     })),
     ...rightArr.map((_, i) => ({
+      id: _.id,
       x: width - margin,
       y: i * rowHeight + rowHeight / 2,
     })),
@@ -124,6 +146,10 @@ const renderCanvas = (canvas, leftArr, rightArr) => {
       const edge = [activeNode, closestNode].sort((a, b) => a.x - b.x);
       addEdge(edges, edge);
       activeNode = null;
+
+      //------------------- My code -------------------
+      answerArray.push(edge);
+      // ----------------------------------------------
     }
   };
 
@@ -177,20 +203,32 @@ const Matching = () => {
   const [submissionCorrect, setSubmissionCorrect] = useState(false);
 
   const leftArr = useMemo(
-    () => pairs.map((pair) => pair.left).sort(randomize),
-    [pairs]
+    () =>
+      pairs
+        .map((pair) => ({
+          id: pair.id,
+          left: pair.left,
+        }))
+        .sort(randomize),
+    [pairs],
   );
 
   const rightArr = useMemo(
-    () => pairs.map((pair) => pair.right).sort(randomize),
-    [pairs]
+    () =>
+      pairs
+        .map((pair) => ({
+          id: pair.id,
+          right: pair.right,
+        }))
+        .sort(randomize),
+    [pairs],
   );
 
   useEffect(() => {
     const { onTouchStart, onTouchMove, onTouchEnd } = renderCanvas(
       canvasRef.current,
       leftArr,
-      rightArr
+      rightArr,
     );
 
     // Add listeners
@@ -220,19 +258,51 @@ const Matching = () => {
 
   const handleSubmit = () => {
     // Check if the left and right column IDs match for all pairs
+    console.log("answerArray", answerArray);
+    if (answerArray.length < defaultPairs.length) alert("Answer all questions");
+    else {
+      let correctAnswerCount = 0;
+      let wrongAnswerCount = 0;
+      answerArray.forEach((ans, i) => {
+        if (ans[0].id == ans[1].id) correctAnswerCount += 1;
+        else wrongAnswerCount += 1;
+      });
+      alert(
+        "Coorect: " + correctAnswerCount + "    Wrong: " + wrongAnswerCount,
+      );
+
+      // submit answerArray
+    }
     const correct = pairs.every((pair) => pair.id === pair.right.id);
 
     // Set submission correctness
     setSubmissionCorrect(correct);
   };
 
-  const { userId } = useParams();
-
   return (
     <div className="App">
+      <Modal open={modals} onClose={() => setModals(false)}>
+        <Box sx={style}>
+          <div style={{ display: "flex", justifyContent: "space-around" }}>
+            <h1>Correct Answer: {correctans}</h1>
+          </div>
+          <Button
+            variant="contained"
+            sx={{
+              width: 70,
+              marginTop: 2,
+              marginBottom: 1,
+              marginRight: 1,
+            }}
+            onClick={() => setModals(false)}
+          >
+            OK
+          </Button>
+        </Box>
+      </Modal>
       <div className="Col" style={{ height: "250px" }}>
         {leftArr.map((e) => (
-          <div key={e}>{e}</div>
+          <div key={e.left}>{e.left}</div>
         ))}
       </div>
       <div className="LinesContainer">
@@ -242,21 +312,33 @@ const Matching = () => {
         {rightArr.map((url, index) => (
           <div key={index}>
             <img
-              src={url}
+              src={url.right}
               alt={`fruit-${index}`}
               style={{ width: "60px", height: "auto" }}
             />
           </div>
         ))}
       </div>
-      <button onClick={handleSubmit} className="SubmitButton">
-        Submit
-      </button>
-      {submissionCorrect && <div className="Mark">✔️ Correct!</div>}
-      <button onClick={handleReset} className="ResetButton">
+      <button
+        onClick={handleReset}
+        className="ResetButton"
+        style={{
+          backgroundColor: "white",
+          colour: "black",
+          borderRadius: "10px",
+          border: "1px solid black",
+        }}
+      >
         Reset
       </button>
-      <h1>{userId}</h1>
+      <button
+        onClick={handleSubmit}
+        className="SubmitButton"
+        style={{ backgroundColor: "#0060ca", borderRadius: "10px" }}
+      >
+        Submit
+      </button>
+      {/* <h1>{userId}</h1> */}
     </div>
   );
 };
